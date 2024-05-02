@@ -377,11 +377,10 @@ def extract_loan_file(
         format_id = LibbyFormats.EBookOverdrive
 
     openbook: Dict = {}
-    rosters: List[Dict] = []
     # pre-extract openbook first so that we can use it to create the book folder
     # with the creator names (needed to place the cover.jpg download)
     if format_id in (LibbyFormats.EBookOverdrive, LibbyFormats.MagazineOverDrive):
-        _, openbook, rosters = libby_client.process_ebook(selected_loan)
+        _, openbook = libby_client.process_ebook(selected_loan)
 
     cover_path = None
     if format_id in (
@@ -443,7 +442,6 @@ def extract_loan_file(
                 loan=selected_loan,
                 cover_path=cover_path,
                 openbook=openbook,
-                rosters=rosters,
                 libby_client=libby_client,
                 args=args,
                 logger=logger,

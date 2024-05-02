@@ -369,7 +369,6 @@ def process_ebook_loan(
     loan: Dict,
     cover_path: Optional[Path],
     openbook: Dict,
-    rosters: List[Dict],
     libby_client: LibbyClient,
     args: argparse.Namespace,
     logger: logging.Logger,
@@ -380,7 +379,6 @@ def process_ebook_loan(
     :param loan:
     :param cover_path:
     :param openbook:
-    :param rosters:
     :param libby_client:
     :param args:
     :param logger:
@@ -419,15 +417,23 @@ def process_ebook_loan(
         with book_folder.joinpath("loan.json").open("w", encoding="utf-8") as f:
             json.dump(loan, f, indent=2)
 
-        with book_folder.joinpath("rosters.json").open("w", encoding="utf-8") as f:
-            json.dump(rosters, f, indent=2)
-
         with book_folder.joinpath("openbook.json").open("w", encoding="utf-8") as f:
             json.dump(openbook, f, indent=2)
 
-    title_contents: Dict = next(
-        iter([r for r in rosters if r["group"] == "title-content"]), {}
-    )
+    # old rosters: {"group": "title-content", "entries": [{"url": "http://..."}]}
+    # now just generate title_contents from openbook
+    title_contents = {
+        "group": "title-content",
+        "entries": [
+            {
+                "url": openbook["download_base"] + item["path"],
+                "mediaType": item["media-type"],
+                "spinePosition": item["-odread-spine-position"],
+            }
+            for item in openbook["spine"]
+        ],
+    }
+
     headers = libby_client.default_headers()
     headers["Accept"] = "*/*"
     contents_re = re.compile(r"parent\.__bif_cfc0\(self,'(?P<base64_text>.+)'\)")
@@ -955,7 +961,6 @@ def process_ebook_loan(
             "media.json",
             "openbook.json",
             "loan.json",
-            "rosters.json",
         ):
             target = book_folder.joinpath(file_name)
             if target.exists():
