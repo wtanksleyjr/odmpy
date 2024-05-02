@@ -646,6 +646,24 @@ def process_ebook_loan(
             else:
                 with open(asset_file_path, "wb") as f_out:
                     f_out.write(res.content)
+        
+        # download image to asset dir from decoded HTML
+        # e.g. '<img src="***_003_r1.jpg" alt="003" class="imgepub" data-loc="60">'
+        if soup:
+            image_url = soup.find("img", attrs={"src": True})
+            if image_url:
+                image_url = urljoin(parsed_entry_url.geturl(), image_url["src"])
+                image_url = urlparse(image_url)
+                image_url = image_url.geturl()
+                # ready to download
+                image_file_name = os.path.basename(image_url)
+                image_file_path = asset_folder.joinpath(image_file_name)
+                if not image_file_path.exists():
+                    logger.info(f"Downloading {image_url} to {image_file_path}")
+                    res = libby_client.make_request(image_url, return_res=True)
+                    with open(image_file_path, "wb") as f_out:
+                        f_out.write(res.content)
+
 
         if soup:
             # try to min. soup searches where possible
