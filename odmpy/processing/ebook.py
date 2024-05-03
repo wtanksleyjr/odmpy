@@ -645,26 +645,27 @@ def process_ebook_loan(
                 with open(asset_file_path, "wb") as f_out:
                     f_out.write(res.content)
 
-        # download images to the same asset dir, fix soup image src
+        # HACK: download css and images to the same asset dir, fix soup
         # e.g. '<img src="../Image/***_003_r1.jpg" alt="003" class="imgepub" data-loc="60">'
         # download into "Text/***_003_r1.jpg" and point to filename "***_003_r1.jpg"
         if soup and media_type in ("application/xhtml+xml", "text/html"):
-            image_tags = soup.find_all("img", attrs={"src": True})
-            for image_tag in image_tags:
-                if not isinstance(image_tag, Tag):
-                    continue
-                image_url = urlparse(
-                    urljoin(parsed_entry_url.geturl(), image_tag["src"])
-                )
-                download_url = image_url.geturl()
-                image_file_name = os.path.basename(download_url)
-                image_file_path = asset_folder.joinpath(image_file_name)
-                if not image_file_path.exists():
-                    logger.info(f"Downloading {download_url} to {image_file_path}")
-                    res = libby_client.make_request(download_url, return_res=True)
-                    with open(image_file_path, "wb") as f_out:
-                        f_out.write(res.content)
-                    image_tag["src"] = image_file_name
+            for tag, attrs, tag_target in [
+                ("img", {"src": True}, "src"),
+                ("link", {"rel": "stylesheet"}, "href"),
+            ]:
+                for ele in soup.find_all(tag, attrs=attrs):  # type: ignore[arg-type]
+                    download_url = urlparse(
+                        urljoin(parsed_entry_url.geturl(), ele[tag_target])
+                    ).geturl()
+                    filename = os.path.basename(download_url)
+                    ele[tag_target] = filename
+
+                    file_path = asset_folder.joinpath(filename)
+                    if not file_path.exists():
+                        logger.info(f"Downloading {download_url} to {file_path}")
+                        res = libby_client.make_request(download_url, return_res=True)
+                        with open(file_path, "wb") as f_out:
+                            f_out.write(res.content)
             # overwrite the file with the updated soup
             with open(asset_file_path, "w", encoding="utf-8") as f_out:
                 f_out.write(str(soup))
