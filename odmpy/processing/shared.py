@@ -20,6 +20,7 @@ import argparse
 import logging
 import subprocess
 import xml.etree.ElementTree as ET
+import re
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 from urllib.parse import urlparse
@@ -239,6 +240,8 @@ def write_tags(
     if description and (
         always_overwrite or eyed3.id3.frames.COMMENT_FID not in audiofile.tag.frame_set
     ):
+        pattern = re.compile('<.*?>')
+        description = re.sub(pattern, '', description)
         audiofile.tag.comments.set(str(description), description="Description")
     if genres and (always_overwrite or not audiofile.tag.genre):
         audiofile.tag.genre = delimiter.join(genres)
