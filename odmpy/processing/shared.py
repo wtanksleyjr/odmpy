@@ -20,6 +20,7 @@ import argparse
 import logging
 import subprocess
 import xml.etree.ElementTree as ET
+import re
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 from urllib.parse import urlparse
@@ -125,9 +126,11 @@ def generate_names(
         # create book folder with just the title and first author
         book_folder_name = args.book_folder_format % {
             "Title": sanitize_path(title, exclude_chars=args.remove_from_paths),
-            "Author": sanitize_path(authors[0], exclude_chars=args.remove_from_paths)
-            if authors
-            else "",
+            "Author": (
+                sanitize_path(authors[0], exclude_chars=args.remove_from_paths)
+                if authors
+                else ""
+            ),
             "Series": sanitize_path(series or "", exclude_chars=args.remove_from_paths),
             "ID": sanitize_path(title_id, exclude_chars=args.remove_from_paths),
             "ReadingOrder": sanitize_path(
@@ -237,6 +240,8 @@ def write_tags(
     if description and (
         always_overwrite or eyed3.id3.frames.COMMENT_FID not in audiofile.tag.frame_set
     ):
+        pattern = re.compile("<.*?>")
+        description = re.sub(pattern, "", description)
         audiofile.tag.comments.set(str(description), description="Description")
     if genres and (always_overwrite or not audiofile.tag.genre):
         audiofile.tag.genre = delimiter.join(genres)
@@ -247,7 +252,9 @@ def write_tags(
             tag_langs = languages
         audiofile.tag.setTextFrame(LANGUAGE_FID, delimiter.join(tag_langs))
     if published_date and (always_overwrite or not audiofile.tag.release_date):
-        audiofile.tag.release_date = published_date
+        audiofile.tag.release_date = LibbyClient.parse_datetime(
+            published_date
+        ).strftime("%Y-%m-%d")
     if cover_bytes:
         audiofile.tag.images.set(
             art.TO_ID3_ART_TYPES[art.FRONT_COVER][0],
@@ -405,9 +412,9 @@ def merge_into_mp3(
             "-vcodec",
             "copy",
             "-b:a",
-            f"{audio_bitrate}k"
-            if audio_bitrate
-            else "64k",  # explicitly set audio bitrate
+            (
+                f"{audio_bitrate}k" if audio_bitrate else "64k"
+            ),  # explicitly set audio bitrate
             "-f",
             "mp3",
             str(temp_book_filename),
@@ -472,9 +479,9 @@ def convert_to_m4b(
             "-c:a",
             merge_codec,
             "-b:a",
-            f"{audio_bitrate}k"
-            if audio_bitrate
-            else "64k",  # explicitly set audio bitrate
+            (
+                f"{audio_bitrate}k" if audio_bitrate else "64k"
+            ),  # explicitly set audio bitrate
         ]
     )
     if cover_filename.exists():
