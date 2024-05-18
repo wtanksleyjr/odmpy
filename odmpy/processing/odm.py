@@ -92,7 +92,7 @@ def process_odm(
     args: argparse.Namespace,
     logger: logging.Logger,
     cleanup_odm_license: bool = False,
-) -> None:
+) -> Dict:
     """
     Download the audiobook loan using the specified odm file
 
@@ -140,6 +140,9 @@ def process_odm(
     description = get_element_text(metadata.find("Description"))
     series = get_element_text(metadata.find("Series"))
     cover_url = get_element_text(metadata.find("CoverUrl"))
+    #cleanup html
+    pattern = re.compile("<.*?>")
+    description = re.sub(pattern, "", description)
     authors = [
         unescape_html(get_element_text(c))
         for c in metadata.find("Creators") or []
@@ -255,7 +258,7 @@ def process_odm(
 
             logger.info(json.dumps(result))
 
-        return
+        return json.dumps(result)
 
     session = init_session(max_retries=args.retries)
 
