@@ -219,9 +219,9 @@ def process_odm(
             result: Dict[str, Any] = {
                 "title": title,
                 "creators": [
-                    f"{c.text} ({c.attrib['role']})"
-                    for c in metadata.find("Creators") or []
+                    {c.attrib['role']: c.text for c in metadata.find("Creators") or [] if c.text}
                 ],
+                "series": series,
                 "publisher": publisher,
                 "subjects": [c.text for c in metadata.find("Subjects") or [] if c.text],
                 "languages": [
