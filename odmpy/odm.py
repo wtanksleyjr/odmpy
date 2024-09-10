@@ -1258,8 +1258,8 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
                     'Opening odm "%s"...',
                     colored(args.odm_file, "blue"),
                 )
-            process_odm(Path(args.odm_file), {}, args, logger)
-            return
+            res = process_odm(Path(args.odm_file), {}, args, logger)
+            return res
 
     except OdmpyRuntimeError as run_err:
         logger.error(
