@@ -57,6 +57,7 @@ class OdmpyNoninteractiveOptions(str, Enum):
     DownloadSelectedN = "selected_loans_indices"
     DownloadSelectedId = "selected_loans_ids"
     ExportLoans = "export_loans_path"
+    ExportCards = "export_cards_path"
     Check = "check_signed_in"
 
     def __str__(self):

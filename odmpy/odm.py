@@ -603,6 +603,13 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
         ),
     )
     parser_libby.add_argument(
+        "--exportcards",
+        dest=OdmpyNoninteractiveOptions.ExportCards,
+        metavar="CARDS_JSON_FILEPATH",
+        type=str,
+        help="Non-interactive mode that exports library card information into a json file at the path specified.",
+    )
+    parser_libby.add_argument(
         "--exportloans",
         dest=OdmpyNoninteractiveOptions.ExportLoans,
         metavar="LOANS_JSON_FILEPATH",
@@ -719,6 +726,9 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
 
     if hasattr(args, "export_loans_path") and args.export_loans_path:
         args.export_loans_path = str(Path(args.export_loans_path).expanduser())
+
+    if hasattr(args, "export_cards_path") and args.export_cards_path:
+        args.export_cards_path = str(Path(args.export_cards_path).expanduser())
 
     # suppress warnings
     logging.getLogger("eyed3").setLevel(
@@ -841,6 +851,7 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
 
             synced_state = libby_client.sync()
             cards = synced_state.get("cards", [])
+            libby_cards = [[c["library"]["websiteId"],c["advantageKey"],c["cardName"]] for c in cards]
             # sort by checkout date so that recent most is at the bottom
             libby_loans = sorted(
                 [
@@ -862,6 +873,9 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
                 key=lambda ln: ln["checkoutDate"],  # type: ignore[no-any-return]
             )
 
+            # The export_loans and export_cards options may be used together,
+            # and will end any other call.
+            export_return = False
             if args.command_name == OdmpyCommands.Libby and args.export_loans_path:
                 logger.info(
                     "Non-interactive mode. Exporting loans json to %s...",
@@ -873,6 +887,22 @@ def run(custom_args: Optional[List[str]] = None, be_quiet: bool = False) -> None
                         'Saved loans as "%s"',
                         colored(args.export_loans_path, "magenta", attrs=["bold"]),
                     )
+                export_return = True
+
+            if args.command_name == OdmpyCommands.Libby and args.export_cards_path:
+                logger.info(
+                    "Non-interactive mode. Exporting library config json to %s...",
+                    colored(args.export_cards_path, "magenta"),
+                )
+                with open(args.export_cards_path, "w", encoding="utf-8") as f:
+                    json.dump(libby_cards, f)
+                    logger.info(
+                        'Saved loans as "%s"',
+                        colored(args.export_cards_path, "magenta", attrs=["bold"]),
+                    )
+                export_return = True
+
+            if export_return:
                 return
 
             if args.command_name == OdmpyCommands.LibbyRenew:
